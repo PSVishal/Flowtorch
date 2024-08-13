@@ -5,7 +5,7 @@ defining new dataloaders, e.g., to support additional file
 formats.
 """
 
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from typing import List, Dict, Union
 from torch import Tensor
 
@@ -29,7 +29,8 @@ class Dataloader(ABC):
         """
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def write_times(self) -> List[str]:
         """Available write times.
 
@@ -39,7 +40,8 @@ class Dataloader(ABC):
         """
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def field_names(self) -> Dict[str, List[str]]:
         """Create a dictionary containing availale fields
 
@@ -50,7 +52,8 @@ class Dataloader(ABC):
         """
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def vertices(self) -> Tensor:
         """Get the vertices at which field values are defined.
 
@@ -60,7 +63,8 @@ class Dataloader(ABC):
         """
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def weights(self) -> Tensor:
         """Get the weights for field values.
 

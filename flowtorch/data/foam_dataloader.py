@@ -74,8 +74,8 @@ class FOAMDataloader(Dataloader):
 
     """
 
-    def __init__(self, path: str, dtype: str = DEFAULT_DTYPE,
-                 distributed: bool = None):
+    def __init__(self, path: str, dtype: pt.dtype = DEFAULT_DTYPE,
+                 distributed: Union[bool, None] = None):
         """Create a FOAMDataloader instance from a path.
 
         :param path: path to an OpenFOAM simulation folder.
@@ -89,7 +89,7 @@ class FOAMDataloader(Dataloader):
 
         """
         self._case = FOAMCase(path, distributed)
-        self._mesh = FOAMMesh(self._case)
+        self._mesh = FOAMMesh(self._case, dtype)
         self._dtype = dtype
 
     def _parse_data(self, data: List[str]) -> pt.Tensor:
@@ -326,7 +326,7 @@ class FOAMCase(object):
     .. automethod:: _eval_field_names
     """
 
-    def __init__(self, path: str, distributed: bool = None):
+    def __init__(self, path: str, distributed: Union[bool, None] = None):
         """Create a `FOAMCase` instance based on a path.
 
         :param path: path to OpenFOAM simulation case
@@ -555,7 +555,7 @@ class FOAMMesh(object):
 
     """
 
-    def __init__(self, case: FOAMCase, dtype: str = DEFAULT_DTYPE):
+    def __init__(self, case: FOAMCase, dtype: pt.dtype = DEFAULT_DTYPE):
         """Create FOAMMesh object based on :class:`FOAMCase`.
         """
         if not isinstance(case, FOAMCase):
@@ -568,7 +568,7 @@ class FOAMMesh(object):
         self._cell_volumes = None
 
     @ classmethod
-    def from_path(cls, path: str, dtype: str = DEFAULT_DTYPE):
+    def from_path(cls, path: str, dtype: pt.dtype = DEFAULT_DTYPE):
         """Create a new instance based on the simulation's path.
 
         :param path: path to the OpenFOAM simulation

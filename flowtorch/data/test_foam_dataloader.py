@@ -198,7 +198,7 @@ class TestFOAMMesh:
     def test_parse_points(self, get_test_data):
         for key in get_test_data.paths.keys():
             case = FOAMCase(get_test_data.paths[key])
-            mesh = FOAMMesh(case)
+            mesh = FOAMMesh(case, pt.float64)
             mesh_path = get_test_data.mesh_paths[key]
             points = mesh._parse_points(join(case._path, mesh_path))
             assert pt.sum(
@@ -208,6 +208,7 @@ class TestFOAMMesh:
             ).item() < FLOAT_TOLERANCE
             n_points = get_test_data.n_points[key]
             assert points.size()[0] == n_points
+            assert points.dtype == pt.float64
 
     def test_parse_faces(self, get_test_data):
         for key in get_test_data.paths.keys():
