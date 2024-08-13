@@ -1,6 +1,7 @@
 """Implementation of the higher-order DMD (HODMD).
 """
 
+from typing import Tuple, Union
 import torch as pt
 from .svd import SVD
 from .dmd import DMD
@@ -31,8 +32,9 @@ def _check_time_delays(delay: int, columns: int, min_cols: int):
         )
 
 
-def _create_time_delays(data_matrix: pt.Tensor, delay: int,
-                        min_cols: int = 2) -> pt.Tensor:
+def _create_time_delays(
+    data_matrix: pt.Tensor, delay: int, min_cols: int = 2
+) -> pt.Tensor:
     """Create data matrix enriched with time delays (Hankel matrix).
     :param data_matrix: 2D data matrix with (reduced) snapshots as column
         vectors
@@ -48,9 +50,7 @@ def _create_time_delays(data_matrix: pt.Tensor, delay: int,
     """
     _, cols = data_matrix.shape
     _check_time_delays(delay, cols, min_cols)
-    return pt.cat(
-        [data_matrix[:, i:cols - (delay - i - 1)] for i in range(delay)]
-    )
+    return pt.cat([data_matrix[:, i : cols - (delay - i - 1)] for i in range(delay)])
 
 
 class HODMD(DMD):
@@ -76,8 +76,14 @@ class HODMD(DMD):
 
     """
 
-    def __init__(self, data_matrix: pt.Tensor, dt: float, delay: int = None,
-                 rank_dr: int = None, **dmd_options: dict):
+    def __init__(
+        self,
+        data_matrix: pt.Tensor,
+        dt: float,
+        delay: Union[int, None] = None,
+        rank_dr: Union[int, None] = None,
+        **dmd_options: dict,
+    ):
         """Create a HODMD instance from data matrix and time step.
 
         :param data_matrix: data matrix whose columns are formed by
@@ -105,7 +111,8 @@ class HODMD(DMD):
         self._svd_dr = SVD(data_matrix, rank_dr)
         super(HODMD, self).__init__(
             _create_time_delays(self._svd_dr.U.T @ self._dm_org, self._delay),
-            dt, **dmd_options
+            dt,
+            **dmd_options,
         )
 
     def predict(self, initial_condition: pt.Tensor, n_steps: int) -> pt.Tensor:
@@ -156,7 +163,7 @@ class HODMD(DMD):
         """
         r = self.svd_dr.rank
         return self.svd_dr.U.type(self._modes.dtype) @ super().modes[:r]
-    
+
     @property
     def dynamics(self) -> pt.Tensor:
         """Get mode dynamics for the original data matrix.
@@ -164,9 +171,10 @@ class HODMD(DMD):
         :return: mode dynamics for the original snapshot sequence
         :rtype: pt.Tensor
         """
-        return pt.diag(self.amplitude) @ \
-            pt.linalg.vander(self.eigvals, N=self._cols_org)
-    
+        return pt.diag(self.amplitude) @ pt.linalg.vander(
+            self.eigvals, N=self._cols_org
+        )
+
     @property
     def reconstruction(self) -> pt.Tensor:
         """Compute reconstruction of original data matrix.
@@ -207,7 +215,7 @@ class HODMD(DMD):
         return self.svd_dr.U @ super().projection_error[:r]
 
     @property
-    def tlsq_error(self) -> pt.Tensor:
+    def tlsq_error(self) -> Tuple[pt.Tensor, pt.Tensor]:
         """Compute the *noise* in X and Y.
 
         :return: noise in X and Y

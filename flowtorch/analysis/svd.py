@@ -146,7 +146,7 @@ class SVD(object):
 
     """
 
-    def __init__(self, data_matrix: pt.Tensor, rank: int = None,
+    def __init__(self, data_matrix: pt.Tensor, rank: Union[int, None] = None,
                  robust: Union[bool, dict] = False):
         shape = data_matrix.shape
         assert len(shape) == 2, (
