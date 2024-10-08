@@ -973,10 +973,30 @@ class FOAMMesh(object):
         if self._case._distributed:
             proc_data = []
             for proc in range(self._case._processors):
-                mesh_location = join(self._case._path, f"processor{proc:d}", POLYMESH_PATH)
-                proc_data.append(
-                    self._compute_cell_centers_and_volumes(mesh_location)
-                )
+                if self._centers_and_volumes_computed(
+                    join(self._case._path, f"processor{proc:d}", CONSTANT_PATH)
+                ):
+                    print(
+                        f"Loading precomputed cell centers and volumes from processor{proc:d}/{CONSTANT_PATH}")
+                    mesh_location = join(self._case._path, f"processor{proc:d}", CONSTANT_PATH)
+                    proc_data.append(
+                        (
+                            self._parse_cell_centers(mesh_location),
+                            self._parse_cell_volumes(mesh_location)
+                        )
+                    )
+                else:
+                    mesh_location = join(self._case._path, f"processor{proc:d}", POLYMESH_PATH)
+                    print(
+                        f"Could not find precomputed cell centers and volumes (processor{proc:d}).\n" +
+                        "Computing cell geometry from scratch (slow, not recommended for large meshes).\n" +
+                        "To compute cell centers and volumes in OpenFOAM, use:\n\n" +
+                        "runParallel postProcess -func \"writeCellCentres\" -constant -time none\n" +
+                        "runParallel postProcess -func \"writeCellVolumes\" -constant -time none\n"
+                    )
+                    proc_data.append(
+                        self._compute_cell_centers_and_volumes(mesh_location)
+                    )
             centers = pt.cat(list(zip(*proc_data))[0])
             volumes = pt.cat(list(zip(*proc_data))[1])
         else:
