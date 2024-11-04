@@ -1,15 +1,11 @@
 """Unit tests for the OptDMD class.
 """
 
-# standard library packages
-from os import remove
-from os.path import join, isfile
-
 # third party packages
 import torch as pt
 
 # flowtorch packages
-from .optdmd import EarlyStopping, OptDMD, _create_conj_complex_pairs
+from .optdmd import OptDMD, _create_conj_complex_pairs
 
 
 def test_create_conj_complex_pairs():
@@ -54,31 +50,6 @@ def test_create_conj_complex_pairs():
     keep, pairs = _create_conj_complex_pairs(ev)
     assert all(keep == pt.tensor((0, 4, 1, 5), dtype=pt.int64))
     assert all(pairs == pt.tensor((0, 1, 2, 3), dtype=pt.int64))
-
-
-class TestEarlyStopping:
-    def test_init(self):
-        stopper = EarlyStopping()
-        stop = stopper(1.0)
-        assert not stop
-        assert stopper._best_loss == 1.0
-        _ = stopper(2.0)
-        assert stopper._counter == 1
-
-    def test_checkpoint(self):
-        dm = pt.rand((50, 20))
-        dmd = OptDMD(dm, 1.0, 5)
-        chp = join("/tmp", "optDMDchp.pt")
-        stopper = EarlyStopping(checkpoint=chp, model=dmd)
-        _ = stopper(1.0)
-        assert isfile(chp)
-        eigs_before = dmd.eigvals
-        dmd.train(3)
-        dmd.load_state_dict(pt.load(chp))
-        eigs_after = dmd.eigvals
-        assert all(pt.isclose(eigs_after, eigs_before))
-        if isfile(chp):
-            remove(chp)
 
 
 class TestOptDMD:

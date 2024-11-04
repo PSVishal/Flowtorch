@@ -12,9 +12,7 @@ from numpy import pi
 
 # flowtorch packages
 from .dmd import DMD
-
-
-DEFAULT_SCHEDULER_OPT = {"mode": "min", "factor": 0.5, "patience": 20, "min_lr": 1.0e-6}
+from .utils import EarlyStopping, DEFAULT_SCHEDULER_OPT
 
 
 def _create_conj_complex_pairs(ev: pt.Tensor) -> Tuple[pt.Tensor, pt.Tensor]:
@@ -71,61 +69,6 @@ def fro_loss(
     :rtype: pt.Tensor
     """
     return (label - prediction).norm() / sqrt(prediction.numel())
-
-
-class EarlyStopping:
-    """Provide stopping control for iterative optimization tasks."""
-
-    def __init__(
-        self,
-        patience: int = 40,
-        min_delta: float = 0.0,
-        checkpoint: str = None,
-        model: pt.nn.Module = None,
-    ):
-        """Initialize a new controller instance.
-
-        :param patience: number of iterations to wait for an improved
-            loss value before stopping; defaults to 40
-        :type patience: int, optional
-        :param min_delta: minimum reduction in the loss values to be
-            considered an improvement; avoids overly long optimization
-            with marginal improvements per iteration; defaults to 0.0
-        :type min_delta: float, optional
-        :param checkpoint: path at which to store the best known state
-            of the model; the state is not saved if None; defaults to None
-        :type checkpoint: str, optional
-        :param model: instance of PyTorch model; the model's state dict is
-            saved upon improvement of the loss function is a valid checkpoint
-            is provided; defaults to None
-        :type model: pt.nn.Module, optional
-        """
-        self._patience = patience
-        self._min_delta = min_delta
-        self._chp = checkpoint
-        self._model = model
-        self._best_loss = float("inf")
-        self._counter = 0
-        self._stop = False
-
-    def __call__(self, loss: float) -> bool:
-        """_summary_
-
-        :param loss: new loss value
-        :type loss: float
-        :return: boolean flag indicating if the optimization can be stopped
-        :rtype: bool
-        """
-        if loss < self._best_loss - self._min_delta:
-            self._best_loss = loss
-            self._counter = 0
-            if self._chp is not None and self._model is not None:
-                pt.save(self._model.state_dict(), self._chp)
-        else:
-            self._counter += 1
-            if self._counter >= self._patience:
-                self._stop = True
-        return self._stop
 
 
 class OptDMD(pt.nn.Module):
@@ -193,7 +136,7 @@ class OptDMD(pt.nn.Module):
         :rtype: tuple
         """
         data = pt.utils.data.TensorDataset(
-            pt.tensor(range(self._dmd._cols), dtype=pt.int64))
+            pt.tensor(range(self._dmd._dm[0].shape[1]), dtype=pt.int64))
         n_train = int(len(data) * train_size / (train_size + val_size))
         n_val = len(data) - n_train
         if n_val > 0:
@@ -273,7 +216,7 @@ class OptDMD(pt.nn.Module):
             for batch in train_loader:
                 pred = self.forward(batch)
                 loss = loss_function(
-                    self._dmd._dm[:, batch[0]], pred, self._eigvecs, self._eigvals
+                    self._dmd._dm[0][:, batch[0]], pred, self._eigvecs, self._eigvals
                 )
                 optimizer.zero_grad()
                 loss.backward()
@@ -285,7 +228,7 @@ class OptDMD(pt.nn.Module):
                     batch = val_set[:]
                     self._log["val_loss"].append(
                         loss_function(
-                            self._dmd._dm[:, batch[0]],
+                            self._dmd._dm[0][:, batch[0]],
                             self.forward(batch),
                             self._eigvecs,
                             self._eigvals,
@@ -312,7 +255,7 @@ class OptDMD(pt.nn.Module):
         rec = (modes * mode_mask) @ self.dynamics
         if not self._dmd._complex:
             rec = rec.real
-        return rec.type(self._dmd._dm.dtype)
+        return rec.type(self._dmd._dm[0].dtype)
 
     def top_modes(
         self,
@@ -387,7 +330,7 @@ class OptDMD(pt.nn.Module):
 
     @property
     def dynamics(self) -> pt.Tensor:
-        vander = pt.linalg.vander(self.eigvals, N=self._dmd._cols)
+        vander = pt.linalg.vander(self.eigvals, N=self._dmd._dm[0].shape[1])
         return pt.diag(self.amplitude.type(vander.dtype)) @ vander
 
     @property
@@ -400,4 +343,4 @@ class OptDMD(pt.nn.Module):
 
     @property
     def reconstruction_error(self) -> pt.Tensor:
-        return self._dmd._dm - self.reconstruction
+        return self._dmd._dm[0] - self.reconstruction
