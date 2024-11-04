@@ -140,6 +140,7 @@ class LinearModel(pt.nn.Module):
         loss_function = _fro_loss_operator if loss_function is None else loss_function
         e, stop = 0, False
         self.to(device)
+        print("Optimization started")
         while e < epochs and not stop:
             if split_options.get("forward_backward"):
                 train_loss_f, train_loss_b = [], []
@@ -248,6 +249,7 @@ class LinearModel(pt.nn.Module):
             e += 1
             stop = stopper(self._log[loss_key][-1])
         self.to("cpu")
+        print("Optimization completed")
         if not self._decompose:
             self._eigvals, self._eigvecs = pt.linalg.eig(self._A.detach())
 
